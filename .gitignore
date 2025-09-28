@@ -1,0 +1,115 @@
+# Node
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+package-lock.json
+yarn.lock
+.pnpm-debug.log
+
+# Build output
+dist/
+build/
+.out/
+public/dist/
+
+# Vite + cache
+.vite/
+.cache/
+.esbuild/
+*.local
+
+# Environment files
+.env
+.env.*.local
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+.env.production
+.env.development
+.env.test
+
+# System files
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+pnpm-debug.log*
+
+# OS temp
+*.tmp
+*.temp
+
+# Editor directories and files
+.vscode/
+.idea/
+*.sublime-workspace
+*.sublime-project
+
+# JetBrains
+*.iml
+out/
+
+# Mac
+.AppleDouble
+.LSOverride
+
+# Linux
+*~
+
+# Coverage reports
+coverage/
+coverage-lcov/
+
+# Test output
+jest-results.json
+test-results.xml
+
+# TypeScript
+*.tsbuildinfo
+
+# Local-Only files
+.local/
+.local.env
+
+# Parcel / Webpack caches
+.cache-loader
+.parcel-cache/
+
+# Storybook
+.storybook-out/
+
+# Generated lockfiles from pnpm/workspaces
+.pnpm/
+
+# Yarn v2/v3 (berry) cache/plugins
+.yarn/*
+!.yarn/releases
+!.yarn/plugins
+!.yarn/patches
+!.yarn/releases
+!.yarn/sdks
+!.yarn/versions
+
+# Optional: if you use Docker
+docker-compose.override.yml
+Dockerfile.dev
+
+# Optional: OS-specific editor backups
+*~ 
+*.swp
+
+# Misc
+.sass-cache
+.idea/
+.vscode/
+tmp/
+temp/
+

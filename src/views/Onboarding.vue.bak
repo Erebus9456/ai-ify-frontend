@@ -1,0 +1,249 @@
+<template>
+  <div class="min-h-screen bg-slate-900 flex flex-col items-center justify-center px-4 py-8 relative overflow-hidden">
+    <div class="w-full max-w-md relative z-10">
+
+      <!-- Welcome -->
+      <div v-if="!started" class="text-center space-y-8">
+        <h1 class="text-4xl font-bold text-white">Welcome to Ai-Ify</h1>
+        <p class="text-gray-300 text-lg">
+          Let's get your helpers up and running.
+        </p>
+        <button @click="startOnboarding" class="w-full bg-gradient-to-r from-pink-500 to-orange-400 text-white font-semibold py-4 px-8 rounded-2xl">
+          <span v-if="!loading">Get Started</span>
+          <span v-else>Loading...</span>
+        </button>
+      </div>
+
+      <!-- Dynamic Question -->
+      <div v-else-if="currentQuestion" class="space-y-6">
+        <h2 class="text-2xl font-bold text-white text-center">
+          {{ currentQuestion.question }}
+        </h2>
+        <p v-if="currentQuestion.description" class="text-gray-300 text-center">
+          {{ currentQuestion.description }}
+        </p>
+
+        <!-- Text -->
+        <input
+          v-if="currentQuestion.type === 'text'"
+          v-model="currentAnswer"
+          type="text"
+          :placeholder="currentQuestion.placeholder || 'Type your answer...'"
+          class="w-full px-4 py-3 rounded-xl bg-gray-700 text-white"
+        />
+
+        <!-- URL -->
+        <input
+          v-else-if="currentQuestion.type === 'url'"
+          v-model="currentAnswer"
+          type="url"
+          :placeholder="currentQuestion.placeholder || 'https://example.com'"
+          class="w-full px-4 py-3 rounded-xl bg-gray-700 text-white"
+          pattern="https://.*"
+          required
+        />
+
+        <!-- Single choice -->
+        <div v-else-if="currentQuestion.type === 'single_choice'" class="space-y-2">
+          <button
+            v-for="opt in currentQuestion.options"
+            :key="opt.value"
+            @click="currentAnswer = opt.value"
+            :class="[
+              'w-full px-4 py-3 rounded-xl',
+              currentAnswer === opt.value ? 'bg-pink-600 text-white' : 'bg-gray-700 text-gray-300'
+            ]"
+          >
+            {{ opt.label }}
+          </button>
+        </div>
+
+        <!-- Multi choice -->
+        <div v-else-if="currentQuestion.type === 'multi_choice'" class="space-y-2">
+          <button
+            v-for="opt in currentQuestion.options"
+            :key="opt.value"
+            @click="toggleMultiChoice(opt.value)"
+            :class="[
+              'w-full px-4 py-3 rounded-xl flex justify-between',
+              currentAnswer.includes(opt.value) ? 'bg-pink-600 text-white' : 'bg-gray-700 text-gray-300'
+            ]"
+          >
+            <span>{{ opt.label }}</span>
+            <span v-if="currentAnswer.includes(opt.value)">✔</span>
+          </button>
+        </div>
+
+        <!-- Number -->
+        <input
+          v-else-if="currentQuestion.type === 'number'"
+          v-model.number="currentAnswer"
+          type="number"
+          class="w-full px-4 py-3 rounded-xl bg-gray-700 text-white"
+        />
+
+        <!-- Next -->
+        <button
+          @click="submitAnswer"
+          :disabled="!isAnswerValid || loading"
+          class="w-full bg-gradient-to-r from-pink-500 to-orange-400 text-white font-semibold py-3 rounded-xl disabled:opacity-50"
+        >
+          {{ currentQuestion.buttonText || 'Next' }}
+        </button>
+      </div>
+
+      <!-- Completed (fallback if needed) -->
+      <div v-else-if="completed" class="text-center space-y-4">
+        <h2 class="text-2xl font-bold text-white">✅ All done!</h2>
+        <p class="text-gray-300">Let's go to your dashboard.</p>
+        <button @click="goToDashboard" class="w-full bg-pink-600 text-white py-3 rounded-xl">
+          Continue
+        </button>
+      </div>
+
+    </div>
+
+    <!-- Toast Notification -->
+    <Transition
+      enter-active-class="transition duration-300 ease-out"
+      enter-from-class="transform translate-x-full opacity-0"
+      enter-to-class="transform translate-x-0 opacity-100"
+      leave-active-class="transition duration-300 ease-in"
+      leave-from-class="transform translate-x-0 opacity-100"
+      leave-to-class="transform translate-x-full opacity-0"
+    >
+      <div
+        v-if="toast.show"
+        :class="[
+          'fixed top-8 right-8 px-6 py-4 rounded-xl shadow-2xl z-50 flex items-center space-x-3',
+          toast.type === 'success' ? 'bg-green-500 text-white' : 'bg-red-500 text-white'
+        ]"
+      >
+        <div class="w-5 h-5 flex-shrink-0">
+          <svg v-if="toast.type === 'success'" fill="currentColor" viewBox="0 0 20 20">
+            <path
+              fill-rule="evenodd"
+              d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z"
+              clip-rule="evenodd"
+            />
+          </svg>
+          <svg v-else fill="currentColor" viewBox="0 0 20 20">
+            <path
+              fill-rule="evenodd"
+              d="M18 10a8 8 0 11-16 0 8 8 0 0116 0zm-7 4a1 1 0 11-2 0 1 1 0 012 0zm-1-9a1 1 0 00-1 1v4a1 1 0 102 0V6a1 1 0 00-1-1z"
+              clip-rule="evenodd"
+            />
+          </svg>
+        </div>
+        <span class="font-medium">{{ toast.message }}</span>
+      </div>
+    </Transition>
+  </div>
+</template>
+
+<script setup>
+import { ref, computed, reactive } from 'vue'
+import { useRouter } from 'vue-router'
+import { useStore } from 'vuex'
+import axios from 'axios'
+
+const router = useRouter()
+const store = useStore()
+
+const started = ref(false)
+const loading = ref(false)
+const completed = ref(false)
+const currentQuestion = ref(null)
+const currentAnswer = ref('')
+const responses = ref([])
+
+// Toast system
+const toast = reactive({ show: false, message: '', type: 'success' })
+const showToast = (message, type = 'success') => {
+  toast.message = message
+  toast.type = type
+  toast.show = true
+  setTimeout(() => {
+    toast.show = false
+  }, 3000)
+}
+
+const isAnswerValid = computed(() => {
+  if (!currentQuestion.value) return false
+  if (currentQuestion.value.type === 'multi_choice') {
+    return Array.isArray(currentAnswer.value) && currentAnswer.value.length > 0
+  }
+  return currentAnswer.value !== '' && currentAnswer.value !== null
+})
+
+const startOnboarding = async () => {
+  loading.value = true
+  try {
+    const response = await axios.post(`${import.meta.env.VITE_API_BASE}/onboarding/start`)
+    started.value = true
+    currentQuestion.value = response.data.question
+    initAnswer()
+    showToast("Onboarding started 🚀", "success")
+  } catch (err) {
+    console.error(err)
+    showToast("Failed to start onboarding ❌", "error")
+  } finally {
+    loading.value = false
+  }
+}
+
+const initAnswer = () => {
+  if (currentQuestion.value?.type === 'multi_choice') {
+    currentAnswer.value = []
+  } else {
+    currentAnswer.value = ''
+  }
+}
+
+const goToDashboard = async () => {
+  try {
+    // ✅ mark onboarding complete in store & Supabase
+    await store.dispatch('auth/completeOnboarding')
+    showToast("Redirecting to dashboard ✅", "success")
+    router.push('/dashboard')
+  } catch (err) {
+    console.error(err)
+    showToast("Failed to complete onboarding ❌", "error")
+  }
+}
+
+const toggleMultiChoice = (val) => {
+  if (!Array.isArray(currentAnswer.value)) currentAnswer.value = []
+  const idx = currentAnswer.value.indexOf(val)
+  if (idx > -1) currentAnswer.value.splice(idx, 1)
+  else currentAnswer.value.push(val)
+}
+
+const submitAnswer = async () => {
+  if (!isAnswerValid.value) return
+  loading.value = true
+  try {
+    responses.value.push({ qid: currentQuestion.value.id, answer: currentAnswer.value })
+
+    const response = await axios.post(`${import.meta.env.VITE_API_BASE}/onboarding/answer`, {
+      questionId: currentQuestion.value.id,
+      answer: currentAnswer.value,
+      answered_count: responses.value.length
+    })
+
+    if (response.data.completed) {
+      showToast("Onboarding completed 🎉", "success")
+      await goToDashboard()
+    } else {
+      currentQuestion.value = response.data.question
+      initAnswer()
+      showToast("Next question loaded ➡️", "success")
+    }
+  } catch (err) {
+    console.error(err)
+    showToast("Error submitting answer ❌", "error")
+  } finally {
+    loading.value = false
+  }
+}
+</script>
